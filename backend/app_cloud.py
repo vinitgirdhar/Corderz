@@ -14,7 +14,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env")
 
-from flask import Flask, jsonify, request, session
+from flask import Flask, jsonify, request, session, send_from_directory
 from flask_cors import CORS
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -30,6 +30,11 @@ if GEMINI_API_KEY:
         genai = genai_module
     except ImportError:
         print("[ledgerly] google-generativeai not installed, AI features disabled")
+
+# Frontend paths
+FRONTEND_DIR = Path(__file__).parent.parent / "pages"
+STYLES_DIR = Path(__file__).parent.parent / "styles"
+SCRIPTS_DIR = Path(__file__).parent.parent / "script"
 
 def create_app(db_path: str | None = None):
     """Application factory."""
@@ -51,10 +56,22 @@ def create_app(db_path: str | None = None):
         user_id = session.get("user_id")
         return user_id
 
-    # ============ HEALTH CHECK ============
+    # ============ SERVE FRONTEND ============
     @app.route("/")
     def home():
-        return jsonify({"status": "ok", "message": "Ledgerly API is running!", "version": "1.0.0"})
+        return send_from_directory(FRONTEND_DIR, "index.html")
+
+    @app.route("/<path:filename>.html")
+    def serve_page(filename):
+        return send_from_directory(FRONTEND_DIR, f"{filename}.html")
+
+    @app.route("/styles/<path:filename>")
+    def serve_styles(filename):
+        return send_from_directory(STYLES_DIR, filename)
+
+    @app.route("/script/<path:filename>")
+    def serve_scripts(filename):
+        return send_from_directory(SCRIPTS_DIR, filename)
 
     @app.route("/api/health")
     def health():
